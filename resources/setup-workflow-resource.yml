@@ -1,0 +1,38 @@
+# Job de setup: scaffolding idempotente não gerenciável pelo bundle (dados, online store e tag policies)
+resources:
+  jobs:
+    fraud_setup:
+      name: ${var.prefix}_fraud_setup
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: online_store
+          default: ${var.online_store}
+        # Identidades de execução dos targets: desenvolvedor (deploy de dev) e SP de staging/prod
+        - name: principals
+          default: ${workspace.current_user.userName},${var.service_principal}
+      environments:
+        - environment_key: setup
+          spec:
+            client: "3"
+            dependencies:
+              - databricks-feature-engineering>=0.16.0
+              - databricks-sdk>=0.101.0
+      tasks:
+        - task_key: data
+          notebook_task:
+            notebook_path: ../setup/notebooks/data.py
+          environment_key: setup
+        - task_key: online_store
+          notebook_task:
+            notebook_path: ../setup/notebooks/online_store.py
+          environment_key: setup
+        - task_key: tag_policy
+          notebook_task:
+            notebook_path: ../setup/notebooks/tag_policy.py
+          environment_key: setup
+      permissions:
+        - group_name: ${var.viewers_group}
+          level: CAN_MANAGE_RUN

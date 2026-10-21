@@ -1,0 +1,29 @@
+# CD: valida e implanta o bundle em `prod` após o merge na `main` (sem executar jobs)
+name: CD - prod
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['main']
+
+# Uma execução por vez no target; a seguinte aguarda na fila para não interromper um deploy em andamento
+concurrency:
+  group: ${{ github.workflow }}-prod
+  cancel-in-progress: false
+
+# OAuth M2M do service principal de CI/CD
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+  DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+jobs:
+  prod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@v1.17.0
+      - name: Validate bundle
+        run: databricks bundle validate --target prod
+      - name: Deploy bundle
+        run: databricks bundle deploy --target prod

@@ -1,0 +1,62 @@
+# Bundle MLOps do modelo antifraude PIX (layout MLOps Stacks)
+bundle:
+  name: databricks_project_fraud
+
+include:
+  - resources/*.yml
+
+# Código one-off de teste fica fora do deploy
+sync:
+  exclude:
+    - .DRAFTS
+
+variables:
+  catalog:
+    description: Catálogo do Unity Catalog
+    default: workspace
+  schema:
+    description: Schema do Unity Catalog do target (pré-existente)
+  prefix:
+    description: Prefixo dos ativos sem diretório (jobs, endpoint)
+    default: ${bundle.target}
+  online_store:
+    description: Instância Lakebase do online feature store (compartilhada entre targets)
+    default: feature-store-online
+  service_principal:
+    description: Application ID do service principal de CI/CD (run_as de staging/prod)
+    default: 1d811f5e-9a95-4f78-a8cb-416fafba0e88
+  viewers_group:
+    description: Grupo com permissão de execução/consulta
+    default: ml-viewers
+
+workspace:
+  host: https://8259551050801125.5.gcp.databricks.com
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      root_path: /Workspace/Users/victor.rodrigues@databricks.com/fraud/dev
+    run_as:
+      user_name: victor.rodrigues@databricks.com
+    variables:
+      schema: poc_ml_dev
+
+  staging:
+    mode: production
+    workspace:
+      root_path: /Workspace/ml/projects/fraud/staging
+    run_as:
+      service_principal_name: ${var.service_principal}
+    variables:
+      schema: poc_ml_staging
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/ml/projects/fraud/prod
+    run_as:
+      service_principal_name: ${var.service_principal}
+    variables:
+      schema: poc_ml
