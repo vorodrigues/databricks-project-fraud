@@ -1,0 +1,32 @@
+# CI: valida, implanta e executa o treino em `staging` a cada PR para a `main`
+name: CI - staging
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ['main']
+
+# Uma execução por vez no target; a seguinte aguarda na fila para não interromper um deploy em andamento
+concurrency:
+  group: ${{ github.workflow }}-staging
+  cancel-in-progress: false
+
+# OAuth M2M do service principal de CI/CD
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+  DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@v1.17.0
+      - name: Validate bundle
+        run: databricks bundle validate --target staging
+      - name: Deploy bundle
+        run: databricks bundle deploy --target staging
+      # Aguarda o término do job; falha o workflow se a run falhar
+      - name: Run training
+        run: databricks bundle run --target staging fraud_training
